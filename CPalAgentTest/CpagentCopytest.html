@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>CPA Agent</title>
+<style>
+       html,
+       body {
+         height: 100%;
+       }
+       body {
+         margin: 0;
+       }
+       h1 {
+         color: whitesmoke;
+         font-family: Segoe UI;
+         font-size: 16px;
+         line-height: 20px;
+         margin: 0;
+         padding: 0 20px;
+       }
+       #banner {
+         align-items: center;
+         background-color: #1b4f83;
+         display: flex;
+         height: 50px;
+         width: 100%;
+       }
+       #webchat {
+         height: calc(100% - 50px);
+         overflow: hidden;
+         position: fixed;
+         top: 50px;
+         width: 100%;
+         text-align: auto;
+       }
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px; /* Add padding for a better click area */
+            display: flex;
+            align-items: center; /* Center align the icon */
+        }
+        .icon-sm {
+            width: 24px; /* Set width */
+            height: 24px; /* Set height */
+            color: #333; /* Default color */
+            transition: color 0.3s; /* Smooth c olor transition on hover */
+        }
+        .icon-button:hover .icon-sm {
+            color: #1b4f83; /* Change color on hover */
+        } 
+</style>
+</head>
+<body>
+<div>
+<div id="banner">
+<h1>CPA Agent</h1>
+</div>
+ 
+    <div id="webchat" role="main"></div>
+</div>
+ 
+<script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+<script>
+    (async function () {
+        const styleOptions = {  
+            botAvatarInitials: 'CPA-PAL', 
+    userAvatarInitials: 'CPA',
+    botAvatarFontSize: '2px', 
+    userAvatarFontSize: '2px',    
+    botAvatarSize: 10, 
+    userAvatarSize: 10,
+    botAvatarBackgroundColor: '#1b4f83', 
+    userAvatarBackgroundColor: '#1b4f83', 
+    bubbleBorderRadius: 20,  
+    bubbleFromUserBorderRadius: 20,                  
+    backgroundColor: '#e0e0e0',
+    bubbleBackground: 'rgba(0, 255, 0, .1)', 
+    bubbleFromUserBackground: 'rgba(253, 190, 7, 0.26)',
+    bubbleBorderColor: 'rgba(51, 166, 42, 0.68)',   
+    bubbleFromUserBorderColor: '#d0e6f9',
+    bubbleFromUserBorderColor: 'rgba(250, 187, 4, 0.42)', 
+    bubbleFontFamily: "'Arial'",
+    bubbleFromUserFontFamily: "sans-serif",
+    rootHeight: '100%', 
+    rootWidth: '100%',
+    hideUploadButton: true,
+    bubbleFromUserNubOffset: 'top',
+	bubbleNubSize: 5,
+    bubbleFromUserNubSize: 3,
+    bubbleNubOffset: 'top',
+    bubbleFromUserNubOffset: 'bottom',
+    sendBoxTextColor: 'Black',
+    sendBoxBorderTop: 'outset 2px grey ',
+    sendBoxBorderBottom: 'outset 2px grey',
+    sendBoxBorderLeft: 'outset 2px grey',
+    sendBoxBorderRight: 'outset 2px grey',
+        };
+ 
+        const tokenEndpointURL = new URL('https://default0cd12112850e4380a038463fdbb945.81.environment.api.powerplatform.com/powervirtualagents/botsbyschema/crf19_cPaAdminTest/directline/token?api-version=2022-03-01-preview');
+        const locale = document.documentElement.lang || 'en';
+ 
+        const [directLineURL, token] = await Promise.all([
+            fetch(new URL(`/powervirtualagents/regionalchannelsettings?api-version=2022-03-01-preview`, tokenEndpointURL))
+                .then(response => response.json())
+                .then(({ channelUrlsById: { directline } }) => directline),
+            fetch(tokenEndpointURL)
+                .then(response => response.json())
+                .then(({ token }) => token)
+        ]);
+ 
+        const directLine = WebChat.createDirectLine({ domain: new URL('v3/directline', directLineURL), token });
+
+        const subscription = directLine.connectionStatus$.subscribe({
+           next(value) {
+             if (value === 2) {
+               directLine
+                 .postActivity({
+                   localTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                   locale,
+                   name: 'startConversation',
+                   type: 'event'
+                 })
+                 .subscribe();
+               // Only send the event once, unsubscribe after the event is sent.
+               subscription.unsubscribe();
+             }
+           }
+         });
+
+ 
+        // Render the web chat
+        WebChat.renderWebChat({ directLine, locale, styleOptions }, document.getElementById('webchat'));
+
+ 
+        // Add footers with Copy button to each bubble
+        const observer = new MutationObserver(() => {
+            const bubbles = document.querySelectorAll('.webchat__bubble');
+            bubbles.forEach(bubble => {
+                if (!bubble.querySelector('.content.footer')) {
+                    const footer = document.createElement('div');
+                    footer.className = 'content footer has-bot-actions';
+                    footer.innerHTML = `
+<button class="icon-button" aria-label="Copy" cursor= "pointer">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-sm">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
+</svg>                       
+</button>                        
+                    `;
+                    bubble.appendChild(footer); // Add the footer to the bubble
+ 
+                    // Add event listener for the copy button
+                    const copyButton = footer.querySelector('.icon-button');
+                    copyButton.addEventListener('click', () => {
+                        const bubbleText = bubble.querySelector('.webchat__bubble__content').innerText.trim(); // Get text from this bubble
+                        navigator.clipboard.writeText(bubbleText)
+                            .then(() => {
+                                console.log('Bubble text copied to clipboard!');
+                                alert('Bubble text copied to clipboard!');
+                            })
+                            .catch(err => {
+                                console.error('Error copying bubble text: ', err);
+                            });
+                    });
+                }
+            });
+        });
+ 
+        // Start observing the web chat for new chat bubbles
+        observer.observe(document.getElementById('webchat'), { childList: true, subtree: true });
+    })();
+</script>
+</body>
+</html>
